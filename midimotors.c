@@ -58,12 +58,12 @@ int main(int argc, char **argv) {
   }
   
   for (i=0; i<12; i++) {
-    scaleHalfPeriods[i] = 1000000 / scale[i] / 2;
+    scaleHalfPeriods[i] = 1000000 / scale[i] / 64;
   }
 
   for (i=0; i<N; i++) {
     pinMode(pins[i], OUTPUT);
-    halfPeriods[i] = 1000000 / 180; // start slow
+    halfPeriods[i] = 1000000 / 360; // start slow
     times[i] = micros() + halfPeriods[i];
     states[i] = 0;
     digitalWrite(pins[i], 0);
@@ -118,6 +118,10 @@ int main(int argc, char **argv) {
               }
             }
           }
+          for (;n < N; n++) {
+            halfPeriods[n] = 1000000 / 360;
+          }
+
           printf("\n");
         }
       }
