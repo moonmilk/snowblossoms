@@ -11,8 +11,7 @@
 
 
 // http://www.phy.mtu.edu/~suits/notefreqs.html
-const float scale[] = {130.81, 138.59, 146.83, 155.56, 164.81, 174.61, 185.00, 196.00, 207.65, 220.00, 233.08, 246.94};
-int scaleHalfPeriods[12];
+const float baseScale[] = {130.81, 138.59, 146.83, 155.56, 164.81, 174.61, 185.00, 196.00, 207.65, 220.00, 233.08, 246.94};
 
 
 // try to play notes on 4 gpio pins simultaneously
@@ -26,8 +25,12 @@ int states[] = {0,0,0,0};
 int multiplier = 180 / 24; // 180 steps per revolution, 24 teeth per gear
 
 // keep track of midi keys that are down
-#define KEYRANGE 128
+// monitor 37 notes starting at note 60
+#define KEYLOW 60
+#define KEYRANGE 37
 int keys[KEYRANGE];
+unsigned int scaleHalfPeriods[KEYRANGE];
+
 
 
 int main(int argc, char **argv) {
@@ -55,10 +58,10 @@ int main(int argc, char **argv) {
   
   for (i=0; i<KEYRANGE; i++) {
     keys[i] = 0;
-  }
-  
-  for (i=0; i<12; i++) {
-    scaleHalfPeriods[i] = 1000000 / scale[i] / 64;
+
+    scaleHalfPeriods[i] = 1000000 / baseScale[i % 12] / 32;
+    // octave up
+    scaleHalfPeriods[i] >>= (i / 12);
   }
 
   for (i=0; i<N; i++) {
@@ -97,15 +100,19 @@ int main(int argc, char **argv) {
         if (snd_midi_event_encode_byte(midiParser, buffer[0], &seqEvent) == 1) {
           if (seqEvent.type==SND_SEQ_EVENT_NOTEON) {
             //printf("NOTE %d %d\n", seqEvent.data.note.note, seqEvent.data.note.velocity);
+            int noteNum = seqEvent.data.note.note;
+            if (noteNum < KEYLOW || noteNum >= KEYLOW+KEYRANGE) break;
             if (seqEvent.data.note.velocity > 0) {
-              keys[seqEvent.data.note.note] = 1;
+              keys[noteNum-KEYLOW] = 1;
             }
             else {
-              keys[seqEvent.data.note.note] = 0;
+              keys[noteNum-KEYLOW] = 0;
             }
           }
           else if (seqEvent.type==SND_SEQ_EVENT_NOTEOFF) {
-            keys[seqEvent.data.note.note] = 0;
+            int noteNum = seqEvent.data.note.note;
+            if (noteNum < KEYLOW || noteNum >= KEYLOW+KEYRANGE) break;
+            keys[noteNum-KEYLOW] = 0;
           }
           
           int n = 0;
@@ -113,7 +120,8 @@ int main(int argc, char **argv) {
             if (keys[i]) {
               printf("%d ", i);
               if (n < N) {
-                halfPeriods[n] = scaleHalfPeriods[i % 12];
+                halfPeriods[n] = scaleHalfPeriods[i];
+                printf("(%d) ", scaleHalfPeriods[i]);
                 n++;
               }
             }
