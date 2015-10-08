@@ -70,6 +70,12 @@ int main(int argc, char **argv) {
   }
 
   printf("hey\n");
+  
+  
+  snd_midi_event_t *midiParser;
+  snd_midi_event_new(10, &midiParser);
+  snd_seq_event_t seqEvent;
+  char buffer[1]; // raw midi buffer
 
   while (1) {
     unsigned int m = micros();
@@ -82,10 +88,6 @@ int main(int argc, char **argv) {
       }
     }
 
-    snd_midi_event_t *midiParser;
-    snd_midi_event_new(10, &midiParser);
-    snd_seq_event_t seqEvent;
-    char buffer[1]; // raw midi buffer
     status = 0;
     while (status != -EAGAIN) {
       status = snd_rawmidi_read(midiin, buffer, 1);
