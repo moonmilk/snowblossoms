@@ -12,12 +12,14 @@
 
 // http://www.phy.mtu.edu/~suits/notefreqs.html
 const float baseScale[] = {130.81, 138.59, 146.83, 155.56, 164.81, 174.61, 185.00, 196.00, 207.65, 220.00, 233.08, 246.94};
+const int IDLE_SLOW_DIVIDER = 60;
 
 
 // try to play notes on 4 gpio pins simultaneously
 const int N = 4;
 int pins[] = {18, 27, 22, 23};
 
+double actualSpeeds[] = {0,0,0,0};
 int halfPeriods[] = {0,0,0,0};
 unsigned int times[] = {0,0,0,0};
 int states[] = {0,0,0,0};
@@ -59,14 +61,14 @@ int main(int argc, char **argv) {
   for (i=0; i<KEYRANGE; i++) {
     keys[i] = 0;
 
-    scaleHalfPeriods[i] = 1000000 / baseScale[i % 12] / 32;
+    scaleHalfPeriods[i] = 1000000 / baseScale[i % 12] / 2; //32;
     // octave up
     scaleHalfPeriods[i] >>= (i / 12);
   }
 
   for (i=0; i<N; i++) {
     pinMode(pins[i], OUTPUT);
-    halfPeriods[i] = 1000000 / 360; // start slow
+    halfPeriods[i] = 1000000 / IDLE_SLOW_DIVIDER; // start slow
     times[i] = micros() + halfPeriods[i];
     states[i] = 0;
     digitalWrite(pins[i], 0);
@@ -85,11 +87,15 @@ int main(int argc, char **argv) {
 
     for (i=0; i<N; i++) {
       if (m > times[i]) {
-        times[i] += halfPeriods[i];
+        times[i] += actualSpeeds[i];
         states[i] = 1-states[i];
         digitalWrite(pins[i], states[i]);
       }
+      // note glide!
+      actualSpeeds[i] = actualSpeeds[i]*0.9997 + halfPeriods[i] * 0.0003;
     }
+    
+  
 
     status = 0;
     while (status != -EAGAIN) {
@@ -127,7 +133,7 @@ int main(int argc, char **argv) {
             }
           }
           for (;n < N; n++) {
-            halfPeriods[n] = 1000000 / 360;
+            halfPeriods[n] = 1000000 / IDLE_SLOW_DIVIDER;
           }
 
           printf("\n");
